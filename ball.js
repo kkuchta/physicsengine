@@ -10,16 +10,21 @@ var GRAVITATIONAL_ACCELERATION = 0.5;
 // The origin is at the top-left of the displayable area
 // Positive x and y are to the right and down.
 
-var Ball = function() {
+var Ball = function( config, forces ) {
     var self = this;
     this.radius = 10;
-    this.x = 0;
-    this.y = 100;
+    this.x = config.x;
+    this.y = config.y;
     this.mass = 1;
     this.bounceEnergy = 0.99;
-    this.velocity = {
-        x:10,
-        y:0
+    this.velocity = config.velocity;
+
+    this.draw = function(){
+        context.beginPath();
+        context.arc(self.x, self.y, self.radius, 0, 2 * Math.PI, false);
+
+        context.closePath();
+        context.fill();
     };
 
     this.tick = function(){
@@ -40,7 +45,7 @@ var Ball = function() {
     };
 
     // Private
-    var forces = [];
+    //var forces = [];
 
     var getAcceleration = function(){
         var totalAccelX = 0;
@@ -75,19 +80,16 @@ var Ball = function() {
     };
 };
 
-var ball = new Ball();
-
-// Add gravity
-ball.addForce( function( ball ){
+var gravity = function( ball ){
     return {
         x:0,
-        y: ball.mass * GRAVITATIONAL_ACCELERATION
+        y: ball.mass * GRAVITATIONAL_ACCELERATION,
+        name: 'gravity'
     };
-} );
+};
 
 
-// Add simplified drag
-ball.addForce( function( ball ){
+var drag = function( ball ){
     var DRAG_CONSTANT = 0.001; // ball's drag coefficient * fluid mass density * 0.5
     var ballVelocity = Math.sqrt( ball.velocity.x * ball.velocity.x + ball.velocity.y * ball.velocity.y );
     
@@ -107,15 +109,15 @@ ball.addForce( function( ball ){
         //debugger
     //}
 
-    var Fx = ( Vx * F ) / V;
-    var Fy = ( Fx * Vy ) / Vx;
+    // Special case because 0/0 == NaN
+    var Fx = (Vx === 0 || F === 0) ? 0 : ( Vx * F ) / V;
+    var Fy = (Vy === 0 || F === 0) ? 0 : ( Vy * F ) / V;
 
-    return { x: Fx, y: Fy };
+    return { x: Fx, y: Fy, name: 'drag' };
     
-} );
+};
 
-// Add friction
-ball.addForce( function( ball ){
+var friction = function( ball ){
     
     // Fake a normal force based on gravity here
     var Fn = ball.mass * GRAVITATIONAL_ACCELERATION;
@@ -126,26 +128,44 @@ ball.addForce( function( ball ){
     // We're going to half-ass this and assume only horizontal friction along
     // the floor.  So, if we're at the bottom and not moving much, apply friction
     if( Math.abs(ball.velocity.y) < 1 && ball.y + ball.radius > bounds.y - 1 ){
-        console.log( "applying friction" );
         Ff = Fn * u;
         Ff *= ball.velocity.x > 0 ? -1 : 1;
     }
-    return {x:Ff,y:0};
-});
+    return {x:Ff,y:0,name:'friction'};
+};
 
-var maxIntervals = 10000;
-var intervalID = setInterval( function(){
-    if( maxIntervals-- <= 0 ){
-        clearInterval( intervalID );
-        //console.log('done');
-    }
+var balls = [];
+for( var i = 0; i < 100; i++ ){
+    balls.push(
+        new Ball(
+            {
+                x: Math.random() * 90 + 10,
+                y: Math.random() * 90 + 10,
+                velocity: {
+                    x: (Math.random() * 40) - 20,
+                    y: (Math.random() * 40) - 20
+                }
+            },
+            [gravity, friction, drag]
+        )
+    );
+}
 
-    ball.tick();
+var world = function( things ){
+    var maxIntervals = 10000;
+    var intervalID = setInterval( function(){
+        if( maxIntervals-- <= 0 ){
+            clearInterval( intervalID );
+            //console.log('done');
+        }
 
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.beginPath();
-    context.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI, false);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        $.each( things, function(){
+            this.tick();
 
-    context.closePath();
-    context.fill();
-}, 10 );
+            this.draw();
+        } );
+    }, 10 );
+};
+
+var world = new world( balls );
