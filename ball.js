@@ -135,18 +135,18 @@ var friction = function( ball ){
 };
 
 var balls = [];
-for( var i = 0; i < 100; i++ ){
+for( var i = 0; i < 10; i++ ){
     balls.push(
         new Ball(
             {
-                x: Math.random() * 90 + 10,
-                y: Math.random() * 90 + 10,
+                x: Math.random() * (bounds.x - 10) + 10,
+                y: Math.random() * (bounds.y - 10) + 10,
                 velocity: {
                     x: (Math.random() * 40) - 20,
                     y: (Math.random() * 40) - 20
                 }
             },
-            [gravity, friction, drag]
+            [friction, drag]
         )
     );
 }
