@@ -6,6 +6,7 @@ var context=canvas.getContext("2d");
 var bounds = {x: canvas.width, y:canvas.height};
 var GRAVITATIONAL_ACCELERATION = 0.5;
 
+
 var Graphics = function( context, canvas ){
     
     this.drawBall = function( x, y, radius, color ){
@@ -171,7 +172,7 @@ var wind = function( ball ){
 };
 
 var balls = [];
-for( var i = 0; i < 10; i++ ){
+for( var i = 0; i < 100; i++ ){
     balls.push(
         new Ball(
             {
@@ -249,6 +250,8 @@ function checkCollisions( itemSet ){
     return collisionsFound;
 }
 
+var targetFPS = 200;
+var interval = 1000 / targetFPS;
 var world = function( things ){
     var maxIntervals = 1000;
     var xBucketCount = 10;
@@ -287,6 +290,7 @@ var world = function( things ){
     };
 
     var intervalID = setInterval( function(){
+        framesSinceLastCheck++;
         if( maxIntervals-- <= 0 ){
             clearInterval( intervalID );
         }
@@ -352,7 +356,19 @@ var world = function( things ){
             this.draw();
         } );
 
-    }, 10 );
+    }, interval );
 };
+
+var framesSinceLastCheck = 0;
+var lastFrameCheck = new Date().getTime();
+
+setInterval( function(){
+    var currentTime = new Date().getTime();
+    var totalTime = currentTime - lastFrameCheck;
+    var fpms = framesSinceLastCheck / totalTime;
+    var fps = fpms * 1000;
+    console.log( 'fps=' + fps + " (target=" + targetFPS + ", interval=" + interval + ")" );
+
+}, 1000 );
 
 var world = new world( balls );
