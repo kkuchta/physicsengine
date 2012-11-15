@@ -7,13 +7,15 @@
 
 var Ball = function( config, forces, graphics ) {
     var self = this;
-    this.radius = 10;
+    this.radius = config.radius;
     this.x = config.x;
     this.y = config.y;
     this.color = config.color;
     this.mass = 1;
     this.bounceEnergy = 0.99;
     this.velocity = config.velocity;
+    this.guid = Utils.generateGUID();
+
 
     this.draw = function(){
         graphics.drawBall( self.x, self.y, self.radius, self.color );
@@ -107,13 +109,14 @@ var Ball = function( config, forces, graphics ) {
 
 // Brute force collision check within a set of items.
 function checkCollisions( itemSet ){
-    var collisionsFound = [];
+    var collisionsFound = {};
     $.each( itemSet, function(){
         var a = this;
         $.each( itemSet, function(){
             var b = this;
-            //if( itemSet.length > 1 ) debugger
-            if( b === a){
+
+            // If they're the same item or we've already checked the reverse order
+            if( b === a || collisionsFound[b.guid+a.guid] ){
                 return true;
             }
 
@@ -121,12 +124,19 @@ function checkCollisions( itemSet ){
             var yDistance = Math.abs( a.y - b.y );
             var distance = Math.sqrt( xDistance * xDistance + yDistance * yDistance );
             if( distance <= a.radius + b.radius ){
-                collisionsFound.push( [a,b] );
+                collisionsFound[a.guid+b.guid] = [a,b];
             }
 
         } );
     });
-    return collisionsFound;
+    //collisionsFound = $.map(collisionsFound, function(element){ return element; } ); // Get array values
+    var values = [];
+    $.each( collisionsFound, function(i,val)
+    {
+        values.push( val );
+    });
+
+    return values;
 }
 
 

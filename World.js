@@ -2,8 +2,8 @@
 var world = function( things, targetFPS ){
     var interval = 1000 / targetFPS;
     var maxIntervals = 1000;
-    var xBucketCount = 10;
-    var yBucketCount = 10;
+    var xBucketCount = 2;
+    var yBucketCount = 2;
     var xBucketSize = bounds.x / xBucketCount;
     var yBucketSize = bounds.y / yBucketCount;
 
@@ -44,11 +44,6 @@ var world = function( things, targetFPS ){
         }
 
         graphics.clear();
-        $.each( things, function(){
-            this.tick();
-        } );
-
-
         // Draw collision grid for debugging
         for( var x = 0; x <= xBucketCount; x++ ){
             graphics.drawLine( {x: x*xBucketSize, y:0}, {x:x*xBucketSize,y:bounds.y} );
@@ -93,12 +88,69 @@ var world = function( things, targetFPS ){
                     // [ [thing1, thing2], [thing7,thing2], [thing3, thing5] ... ]
                     var collisions = checkCollisions( collisionBuckets[x][y] );
                     $.each( collisions, function(){
-                        this[0].color = 'red';
-                        this[1].color = 'red';
+                        //this[0].color = 'red';
+                        //this[1].color = 'red';
+
+                        var A = this[0];
+                        var B = this[1];
+                        //debugger
+                        var Vr = {
+                            x: B.velocity.x - A.velocity.x,
+                            y: B.velocity.y - A.velocity.y
+                        };
+                        var VrTotal = Math.sqrt( Vr.x * Vr.x + Vr.y * Vr.y );
+                        var e = 0.95; // Totally elastic for now
+
+                        // The unit normal from A to B
+                        var Dx = B.x - A.x;
+                        var Dy = B.y - A.y;
+                        var D = Math.sqrt( Dx*Dx + Dy*Dy );
+
+                        var Nx = Vr.x / VrTotal;
+                        var Ny = Vr.y / VrTotal;
+
+                        var Ix = (1 + e) * Nx * (Vr.x * Nx + Vr.y * Ny) / (1/A.mass + 1/B.mass);
+                        var Iy = (1 + e) * Ny * (Vr.x * Nx + Vr.y * Ny) / (1/A.mass + 1/B.mass);
+                        var V = {
+                            a: {
+                                x: Ix * (1/A.mass),
+                                y: Iy * (1/A.mass)
+                            },
+                            b: {
+                                x: Ix * (1/B.mass),
+                                y: Iy * (1/B.mass)
+                            }
+                        };
+
+                        // Bounce the velocity
+                        A.velocity.x += V.a.x;
+                        A.velocity.y += V.a.y;
+                        B.velocity.x -= V.b.x;
+                        B.velocity.y -= V.b.y;
+
+                        // Correct overlap (gonna get some serious jitter here)
+                        if( D < A.radius + B.radius ){
+                            
+                            // correction
+                            var C = (A.radius + B.radius) - D;
+                            var Cx = Nx * C;
+                            var Cy = Ny * C;
+                            A.x += Cx;
+                            A.y += Cy;
+                            B.x -= Cx;
+                            B.y -= Cy;
+                        }
+
                     } );
                 }
             }
         }
+
+        $.each( things, function(){
+            this.tick();
+        } );
+
+
 
         $.each( things, function(){
             this.draw();
